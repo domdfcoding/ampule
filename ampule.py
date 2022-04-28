@@ -116,8 +116,8 @@ def __on_request(method, rule, request_handler):
         # Is this portion of the path a variable?
         var = variable_re.match(part)
         if var:
-            # If so, allow any alphanumeric value
-            regex += r"([a-zA-Z0-9_-]+)\/"
+            # If so, allow any alphanumeric value (and .)
+            regex += r"([a-zA-Z0-9_.-]+)\/"
         else:
             # Otherwise exact match
             regex += part + r"\/"
