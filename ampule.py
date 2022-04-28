@@ -1,5 +1,6 @@
 import io
 import re
+import traceback
 
 BUFFER_SIZE = 256
 TIMEOUT = 30
@@ -79,13 +80,7 @@ def __send_response(client, code, headers, data):
         response.write(("HTTP/1.1 %i OK\r\n" % code).encode())
         for k, v in headers.items():
             response.write(("%s: %s\r\n" % (k, v)).encode())
-
-        response.write(b"\r\n")
-        if(isinstance(data, str)):
-            response.write(data.encode())
-        else:
-            response.write(data)
-        response.write(b"\r\n")
+        response.write(("\r\n" + data + "\r\n").encode())
 
         response.flush()
         response.seek(0)
@@ -134,7 +129,13 @@ def __match_route(path, method):
     return None
 
 def listen(socket, timeout=30):
-    client, remote_address = socket.accept()
+    try:
+        client, remote_address = socket.accept()
+    except OSError as e:
+        if e.errno == 11:  # EAGAIN; Try Again
+            return
+        else:  # Some other error
+            raise
     try:
         client.settimeout(timeout)
         request = __read_request(client)
@@ -145,7 +146,8 @@ def listen(socket, timeout=30):
             __send_response(client, status, headers, body)
         else:
             __send_response(client, 404, {}, "Not found")
-    except BaseException as e:
+    except Exception as e:
+        traceback.print_exception(None, e, e.__traceback__)
         print("Error with request:", e)
         __send_response(client, 500, {}, "Error processing request")
     client.close()
